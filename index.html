@@ -144,18 +144,30 @@ input:focus,select:focus{border-color:#00f5ff;outline:0}
   </div>
 </div>
 
-<!-- ADMIN LOGIN - JADA CARD -->
-<div id="adminlogin" class="screen">
-  <div class="header"><span class="back-btn" onclick="showScreen('login')">←</span>admin login</div>
-  <div style="text-align:center;padding:50px;font-size:60px">🛡️</div>
-  <input id="adminname" placeholder="admin name" value="JADA CARD">
-  <div class="label">🌍 select country code</div>
-  <div class="phone-group">
-    <select id="admincountry"></select>
-    <input id="adminphonedigits" placeholder="9 digits" value="788417769">
-  </div>
-  <button class="btn" onclick="adminLogin()">login</button>
-</div>
+<!-- function adminLogin(){
+  let name = document.getElementById('adminname').value.trim();
+  let code = document.getElementById('admincountry').value;
+  let digits = document.getElementById('adminphonedigits').value.trim();
+
+  let correctName = 'JADA CARD';
+  let correctPhone = '788417769';
+
+  if(name.toUpperCase()!== correctName){
+    alert('Wrong admin name');
+    return;
+  }
+  if(code + digits!== correctPhone){
+    alert('Wrong admin phone');
+    return;
+  }
+
+  // REMEMBER ADMIN LOGIN
+  localStorage.setItem('jc_admin_logged', 'true');
+  localStorage.setItem('jc_admin_name', name);
+
+  showScreen('adminpanel');
+  loadAdmin();
+}
 
 <!-- ADMIN PANEL -->
 <div id="adminpanel" class="screen">
