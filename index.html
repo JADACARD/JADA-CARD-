@@ -167,6 +167,13 @@ input:focus,select:focus{border-color:#00f5ff;outline:0}
 
   showScreen('adminpanel');
   loadAdmin();
+  function logout(){
+  localStorage.removeItem('jc_user');
+  localStorage.removeItem('jc_admin_logged'); // clear admin session too
+  localStorage.removeItem('jc_admin_name');
+  user=null;
+  showScreen('login');
+}
 }
 
 <!-- ADMIN PANEL -->
