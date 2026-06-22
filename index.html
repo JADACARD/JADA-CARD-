@@ -203,6 +203,29 @@ input:focus,select:focus{border-color:#00f5ff;outline:0}
     </div>
   </div>
 </div>
+  window.onload = function(){
+  // CHECK IF ADMIN WAS LOGGED IN BEFORE
+  let adminLogged = localStorage.getItem('jc_admin_logged');
+  if(adminLogged === 'true'){
+    showScreen('adminpanel');
+    loadAdmin();
+    return;
+  }
+
+  let sel = document.getElementById('countrycode');
+  let sel2 = document.getElementById('admincountry');
+  sel.innerHTML = '<option value="">country</option>';
+  sel2.innerHTML = '<option value="">country</option>';
+  countries.forEach(c=>{
+    let parts = c[1].split(' ');
+    let code = parts[0];
+    let name = parts.slice(1).join(' ');
+    sel.innerHTML += `<option value="${code}">${c[0]} ${code} ${name}</option>`;
+    sel2.innerHTML += `<option value="${code}">${c[0]} ${code} ${name}</option>`;
+  });
+  updatePrices();
+  if(user){showScreen('home');updateUI();}
+}
 
 <script>
 // 11 COUNTRIES WITH FLAGS
